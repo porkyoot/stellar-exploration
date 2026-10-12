@@ -29,6 +29,10 @@ object WaypointTracking {
         WaypointStyleAssets.ROOT_ID,
         Identifier.fromNamespaceAndPath(StellarExplorationMod.MOD_ID, "banner"),
     )
+    val SPAWN_STYLE: ResourceKey<WaypointStyleAsset> = ResourceKey.create(
+        WaypointStyleAssets.ROOT_ID,
+        Identifier.fromNamespaceAndPath(StellarExplorationMod.MOD_ID, "spawn"),
+    )
 
     private val trackedWaypoints: ConcurrentHashMap<UUID, TrackedWaypoint> = ConcurrentHashMap()
     private val waypointNames: ConcurrentHashMap<UUID, Component> = ConcurrentHashMap()

@@ -18,12 +18,13 @@ import java.util.Optional
 import java.util.UUID
 
 /**
- * Scans player inventory items to extract exploration waypoints (lodestones, recovery compasses, map banners).
+ * Scans player inventory items to extract exploration waypoints (lodestones, recovery compasses, map banners, spawn).
  */
 internal object WaypointScanner {
     private const val DEFAULT_ALPHA: Int = 255
     private const val DEFAULT_LODESTONE_COLOR: Int = 0x80FF80
-    private const val DEFAULT_RECOVERY_COLOR: Int = 0x55FFFF
+    private const val DEFAULT_DEATH_COLOR: Int = 0xFFFFFF
+    private const val DEFAULT_SPAWN_COLOR: Int = 0xFFFFFF
 
     fun scanPlayerInventory(
         player: LocalPlayer,
@@ -38,6 +39,11 @@ internal object WaypointScanner {
             destination = destination,
             names = names,
         )
+
+        if (config.trackNormalCompasses.value() && isNormalCompassHeld(player, config)) {
+            processNormalCompass(context)
+        }
+
         val nonEquipment = player.inventory.nonEquipmentItems
         for (i in 0 until nonEquipment.size) {
             processItemStack(context, nonEquipment[i])
@@ -50,6 +56,37 @@ internal object WaypointScanner {
         if (!carried.isEmpty) {
             processItemStack(context, carried)
         }
+    }
+
+    private fun isNormalCompass(stack: ItemStack): Boolean {
+        return stack.`is`(Items.COMPASS) && !stack.has(DataComponents.LODESTONE_TRACKER)
+    }
+
+    private fun isNormalCompassHeld(player: LocalPlayer, config: StellarExplorationConfig): Boolean {
+        if (isNormalCompass(player.mainHandItem) || isNormalCompass(player.offhandItem)) {
+            return true
+        }
+        if (!config.normalCompassRequiresHolding.value()) {
+            return player.inventory.nonEquipmentItems.any { isNormalCompass(it) }
+        }
+        return false
+    }
+
+    private fun processNormalCompass(context: TrackingContext) {
+        val respawnData = context.player.level().respawnData
+        if (respawnData.dimension() != context.dimension) return
+
+        val pos = respawnData.pos()
+        val uuid = UUID.nameUUIDFromBytes(
+            "spawn:${pos.x}:${pos.y}:${pos.z}".toByteArray(StandardCharsets.UTF_8),
+        )
+        val color = ARGB.color(DEFAULT_ALPHA, DEFAULT_SPAWN_COLOR)
+        val icon = Waypoint.Icon().apply {
+            style = WaypointTracking.SPAWN_STYLE
+            this.color = Optional.of(color)
+        }
+        context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
+        context.names[uuid] = Component.translatable("waypoint.stellar_exploration.world_spawn")
     }
 
     private fun processItemStack(context: TrackingContext, stack: ItemStack) {
@@ -104,7 +141,7 @@ internal object WaypointScanner {
         val uuid = UUID.nameUUIDFromBytes(
             "death:${pos.x}:${pos.y}:${pos.z}".toByteArray(StandardCharsets.UTF_8),
         )
-        val color = ColorHandler.getColor(stack) ?: ARGB.color(DEFAULT_ALPHA, DEFAULT_RECOVERY_COLOR)
+        val color = ColorHandler.getColor(stack) ?: ARGB.color(DEFAULT_ALPHA, DEFAULT_DEATH_COLOR)
         val icon = Waypoint.Icon().apply {
             style = WaypointTracking.DEATH_STYLE
             this.color = Optional.of(color)

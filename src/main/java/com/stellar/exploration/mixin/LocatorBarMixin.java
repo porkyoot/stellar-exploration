@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.stellar.exploration.renderer.CardinalPointsRenderer;
+import com.stellar.exploration.renderer.DeathWaypointRenderer;
 import com.stellar.exploration.renderer.PlayerHeadRenderer;
 import com.stellar.exploration.waypoints.WaypointNameRendering;
 import net.minecraft.client.DeltaTracker;
@@ -53,9 +54,15 @@ public abstract class LocatorBarMixin implements ContextualBar {
             width,
             height
         );
-        if (!renderedHead) {
-            original.call(guiGraphics, pipeline, sprite, x, y, width, height, color);
+        if (renderedHead) {
+            return;
         }
+
+        if (DeathWaypointRenderer.renderDeathIcon(this.minecraft, guiGraphics, waypoint, x, y, width, height)) {
+            return;
+        }
+
+        original.call(guiGraphics, pipeline, sprite, x, y, width, height, color);
     }
 
     @Inject(method = "extractRenderState", at = @At("RETURN"))

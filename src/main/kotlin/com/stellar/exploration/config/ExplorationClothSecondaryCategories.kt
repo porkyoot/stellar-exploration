@@ -54,7 +54,37 @@ internal object ExplorationClothSecondaryCategories {
             Component.translatable("stellar_exploration.config.category.waypoints"),
         )
         addCompassWaypointEntries(category, entries, config)
+        addNormalCompassEntries(category, entries, config)
         addInventoryWaypointEntries(category, entries, config)
+    }
+
+    private fun addNormalCompassEntries(
+        category: ConfigCategory,
+        entries: ConfigEntryBuilder,
+        config: StellarExplorationConfig,
+    ) {
+        val spawnEntry = entries
+            .startBooleanToggle(
+                Component.translatable("stellar_exploration.config.track_normal_compasses"),
+                config.trackNormalCompasses.value(),
+            )
+            .setDefaultValue(true)
+            .setTooltip(Component.translatable("stellar_exploration.config.track_normal_compasses.tooltip"))
+            .setSaveConsumer { value -> config.trackNormalCompasses.setValue(value, true) }
+            .build()
+
+        val requireHoldingEntry = entries
+            .startBooleanToggle(
+                Component.translatable("stellar_exploration.config.normal_compass_requires_holding"),
+                config.normalCompassRequiresHolding.value(),
+            )
+            .setDefaultValue(true)
+            .setTooltip(Component.translatable("stellar_exploration.config.normal_compass_requires_holding.tooltip"))
+            .setSaveConsumer { value -> config.normalCompassRequiresHolding.setValue(value, true) }
+            .build()
+
+        category.addEntry(spawnEntry)
+        category.addEntry(requireHoldingEntry)
     }
 
     private fun addCompassWaypointEntries(

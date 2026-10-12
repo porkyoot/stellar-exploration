@@ -40,7 +40,7 @@ class StellarExplorationConfig : ReflectiveConfig() {
     @Comment("Hexadecimal color format for cardinal points (#AARRGGBB)")
     val cardinalPointsColorHex: TrackedValue<String> = value("#FFFFFFFF")
 
-    // Waypoint Tracking (Lodestone, Death, Banners)
+    // Waypoint Tracking (Lodestone, Death, Banners, Spawn)
     @Comment("Track lodestones from compasses in inventory on the locator bar")
     val trackLodestones: TrackedValue<Boolean> = value(true)
 
@@ -49,6 +49,12 @@ class StellarExplorationConfig : ReflectiveConfig() {
 
     @Comment("Track banner markers from filled maps in inventory on the locator bar")
     val trackBannerMarkers: TrackedValue<Boolean> = value(true)
+
+    @Comment("Track world spawn location from normal compasses on the locator bar")
+    val trackNormalCompasses: TrackedValue<Boolean> = value(true)
+
+    @Comment("Only show spawn waypoint when holding a normal compass in mainhand or offhand")
+    val normalCompassRequiresHolding: TrackedValue<Boolean> = value(true)
 
     @Comment("Scan nested items inside bundles in inventory for compasses and maps")
     val trackBundles: TrackedValue<Boolean> = value(true)

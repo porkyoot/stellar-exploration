@@ -17,6 +17,7 @@ class WaypointTrackingSpec : FunSpec({
         WaypointTracking.LODESTONE_STYLE.identifier().toString() shouldBe "stellar_exploration:lodestone"
         WaypointTracking.DEATH_STYLE.identifier().toString() shouldBe "stellar_exploration:death"
         WaypointTracking.BANNER_STYLE.identifier().toString() shouldBe "stellar_exploration:banner"
+        WaypointTracking.SPAWN_STYLE.identifier().toString() shouldBe "stellar_exploration:spawn"
     }
 
     test("should initialize with empty tracked waypoints") {

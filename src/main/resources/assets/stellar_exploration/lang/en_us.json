@@ -36,8 +36,13 @@
   "stellar_exploration.config.track_recovery.tooltip": "Display last death location as a waypoint on the locator bar.",
   "stellar_exploration.config.track_banner_markers": "Track Banner Markers from Maps",
   "stellar_exploration.config.track_banner_markers.tooltip": "Display banner markers from filled maps in your inventory as waypoints on the locator bar.",
+  "stellar_exploration.config.track_normal_compasses": "Track World Spawn with Compass",
+  "stellar_exploration.config.track_normal_compasses.tooltip": "Display world spawn location with a cross on the locator bar when holding a compass.",
+  "stellar_exploration.config.normal_compass_requires_holding": "Require Holding Normal Compass",
+  "stellar_exploration.config.normal_compass_requires_holding.tooltip": "Only show spawn waypoint when holding a normal compass in main hand or off hand.",
   "stellar_exploration.config.track_bundles": "Track Compasses & Maps in Bundles",
   "stellar_exploration.config.track_bundles.tooltip": "Scan nested bundles in inventory for compasses and filled maps.",
+  "waypoint.stellar_exploration.world_spawn": "World Spawn",
 
   "stellar_exploration.config.hud_enabled": "Enable Exploration HUD",
   "stellar_exploration.config.hud_enabled.tooltip": "Toggle the exploration telemetry HUD overlay.",

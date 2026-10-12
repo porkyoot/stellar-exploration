@@ -1,7 +1,7 @@
 {
   "sprites": [
-    "stellar_exploration:hud/locator_bar_dot/death_0",
-    "stellar_exploration:hud/locator_bar_dot/death_1",
-    "stellar_exploration:hud/locator_bar_dot/death_2"
+    "stellar_exploration:death_0",
+    "stellar_exploration:death_1",
+    "stellar_exploration:death_2"
   ]
 }
