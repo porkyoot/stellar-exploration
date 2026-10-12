@@ -26,6 +26,8 @@ class StellarExplorationConfigSpec : FunSpec({
         config.trackLodestones.value() shouldBe true
         config.trackRecoveryCompasses.value() shouldBe true
         config.trackBannerMarkers.value() shouldBe true
+        config.trackNormalCompasses.value() shouldBe true
+        config.normalCompassRequiresHolding.value() shouldBe false
         config.trackBundles.value() shouldBe true
         config.hudEnabled.value() shouldBe true
         config.showCoordinates.value() shouldBe true

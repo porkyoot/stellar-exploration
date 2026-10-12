@@ -54,7 +54,7 @@ class StellarExplorationConfig : ReflectiveConfig() {
     val trackNormalCompasses: TrackedValue<Boolean> = value(true)
 
     @Comment("Only show spawn waypoint when holding a normal compass in mainhand or offhand")
-    val normalCompassRequiresHolding: TrackedValue<Boolean> = value(true)
+    val normalCompassRequiresHolding: TrackedValue<Boolean> = value(false)
 
     @Comment("Scan nested items inside bundles in inventory for compasses and maps")
     val trackBundles: TrackedValue<Boolean> = value(true)

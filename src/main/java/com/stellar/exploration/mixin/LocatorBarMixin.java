@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.stellar.exploration.renderer.CardinalPointsRenderer;
+import com.stellar.exploration.renderer.CompassWaypointRenderer;
 import com.stellar.exploration.renderer.DeathWaypointRenderer;
 import com.stellar.exploration.renderer.PlayerHeadRenderer;
 import com.stellar.exploration.waypoints.WaypointNameRendering;
@@ -63,6 +64,10 @@ public abstract class LocatorBarMixin implements ContextualBar {
         }
 
         if (DeathWaypointRenderer.renderDeathIcon(this.minecraft, guiGraphics, waypoint, sprite, x, y, width, height)) {
+            return;
+        }
+
+        if (CompassWaypointRenderer.renderCompassIcon(this.minecraft, guiGraphics, waypoint, sprite, x, y, width, height)) {
             return;
         }
 

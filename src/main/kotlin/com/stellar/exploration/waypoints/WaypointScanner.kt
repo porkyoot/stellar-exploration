@@ -44,13 +44,6 @@ internal object WaypointScanner {
             names = names,
         )
 
-        if (config.trackNormalCompasses.value()) {
-            val normalCompass = findNormalCompass(player, config)
-            if (normalCompass != null) {
-                processNormalCompass(context, normalCompass)
-            }
-        }
-
         val nonEquipment = player.inventory.nonEquipmentItems
         for (i in 0 until nonEquipment.size) {
             processItemStack(context, nonEquipment[i])
@@ -65,15 +58,10 @@ internal object WaypointScanner {
         }
     }
 
-    private fun findNormalCompass(player: LocalPlayer, config: StellarExplorationConfig): ItemStack? {
-        val hands = listOf(player.mainHandItem, player.offhandItem)
-        val held = hands.firstOrNull { it.isNormalCompass() }
-        if (held != null) return held
-        if (config.normalCompassRequiresHolding.value()) return null
-        return player.inventory.nonEquipmentItems.firstOrNull { it.isNormalCompass() }
-    }
+    private fun processNormalCompass(context: TrackingContext, stack: ItemStack) {
+        if (!stack.isNormalCompass()) return
+        if (context.config.normalCompassRequiresHolding.value() && !isHoldingCompass(context.player)) return
 
-    private fun processNormalCompass(context: TrackingContext, compass: ItemStack) {
         val respawnData = context.player.level().respawnData
         if (respawnData.dimension() != context.dimension) return
 
@@ -81,13 +69,13 @@ internal object WaypointScanner {
         val uuid = UUID.nameUUIDFromBytes(
             "spawn:${pos.x}:${pos.y}:${pos.z}".toByteArray(StandardCharsets.UTF_8),
         )
-        val color = ARGB.color(DEFAULT_ALPHA, DEFAULT_SPAWN_COLOR)
+        val color = ColorHandler.getColor(stack) ?: ARGB.color(DEFAULT_ALPHA, DEFAULT_SPAWN_COLOR)
         val icon = Waypoint.Icon().apply {
             style = WaypointTracking.SPAWN_STYLE
             this.color = Optional.of(color)
         }
         context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
-        val customName = ColorHandler.extractCustomName(compass)
+        val customName = ColorHandler.extractCustomName(stack)
         if (customName != null) {
             context.names[uuid] = customName
         }
@@ -95,6 +83,10 @@ internal object WaypointScanner {
 
     private fun processItemStack(context: TrackingContext, stack: ItemStack) {
         if (stack.isEmpty) return
+
+        if (context.config.trackNormalCompasses.value()) {
+            processNormalCompass(context, stack)
+        }
 
         if (context.config.trackLodestones.value()) {
             processLodestoneCompass(context, stack)
@@ -109,9 +101,13 @@ internal object WaypointScanner {
         }
 
         if (context.config.trackBundles.value()) {
-            stack.get(DataComponents.BUNDLE_CONTENTS)?.itemCopyStream()?.forEach { bundled ->
-                processItemStack(context, bundled)
-            }
+            processBundledItems(context, stack)
+        }
+    }
+
+    private fun processBundledItems(context: TrackingContext, stack: ItemStack) {
+        stack.get(DataComponents.BUNDLE_CONTENTS)?.itemCopyStream()?.forEach { bundled ->
+            processItemStack(context, bundled)
         }
     }
 
@@ -241,6 +237,9 @@ internal object WaypointScanner {
         val names: MutableMap<UUID, Component>,
     )
 }
+
+private fun isHoldingCompass(player: LocalPlayer): Boolean =
+    player.mainHandItem.isNormalCompass() || player.offhandItem.isNormalCompass()
 
 private fun ItemStack.isNormalCompass(): Boolean =
     this.`is`(Items.COMPASS) && !this.has(DataComponents.LODESTONE_TRACKER)
