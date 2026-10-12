@@ -35,6 +35,8 @@ object CardinalPointsRenderer {
     private const val LEVEL_AVOIDANCE_PADDING: Int = 6
     private const val BAR_EDGE_INSET: Float = 6.0f
     private const val BAR_CLAMP_PADDING: Int = 2
+    const val MAJOR_SCALE: Float = 1.0f
+    const val INTERMEDIATE_SCALE: Float = 0.75f
 
     private data class CardinalPoint(val label: String, val bearing: Float, val color: Int, val isMajor: Boolean)
 
@@ -115,6 +117,8 @@ object CardinalPointsRenderer {
         return player != null && !player.isSpectator
     }
 
+    fun resolveScale(isMajor: Boolean): Float = if (isMajor) MAJOR_SCALE else INTERMEDIATE_SCALE
+
     private fun renderPoint(guiGraphics: GuiGraphicsExtractor, point: CardinalPoint, diff: Float, layout: BarLayout) {
         val progress = diff / VISIBLE_DEGREE_RANGE
         val posX = layout.barCenterX + (progress * layout.usableHalfWidth).toInt()
@@ -129,8 +133,19 @@ object CardinalPointsRenderer {
         }
 
         val drawY = layout.barTop - BAR_Y_OFFSET
+        val scale = resolveScale(point.isMajor)
 
-        guiGraphics.text(layout.font, point.label, drawX, drawY, point.color, true)
+        if (scale != MAJOR_SCALE) {
+            val centerX = drawX + textWidth / 2.0f
+            val centerY = drawY + layout.font.lineHeight / 2.0f
+            val pose = guiGraphics.pose()
+            pose.pushMatrix()
+            pose.scaleAround(scale, scale, centerX, centerY)
+            guiGraphics.text(layout.font, point.label, drawX, drawY, point.color, true)
+            pose.popMatrix()
+        } else {
+            guiGraphics.text(layout.font, point.label, drawX, drawY, point.color, true)
+        }
     }
 
     private data class BarLayout(
