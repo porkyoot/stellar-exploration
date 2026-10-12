@@ -58,7 +58,7 @@ public abstract class LocatorBarMixin implements ContextualBar {
             return;
         }
 
-        if (DeathWaypointRenderer.renderDeathIcon(this.minecraft, guiGraphics, waypoint, x, y, width, height)) {
+        if (DeathWaypointRenderer.renderDeathIcon(this.minecraft, guiGraphics, waypoint, sprite, x, y, width, height)) {
             return;
         }
 
