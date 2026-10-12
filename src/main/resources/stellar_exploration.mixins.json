@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "com.stellar.exploration.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ExperienceBarMixin",
+    "HudMixin",
+    "LocalPlayerMixin",
+    "LocatorBarMixin",
+    "PlayerInventoryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
