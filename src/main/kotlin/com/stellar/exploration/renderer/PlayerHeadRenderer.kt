@@ -7,33 +7,17 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.PlayerInfo
 import net.minecraft.resources.Identifier
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.waypoints.TrackedWaypoint
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.cos
-import kotlin.math.pow
 
 /**
- * Handles rendering player skin heads and animated name tags on the Locator Bar.
+ * Handles rendering player skin heads and borders on the Locator Bar.
  */
 object PlayerHeadRenderer {
-    private val nameAnimStartTimes: ConcurrentHashMap<String, Long> = ConcurrentHashMap()
-    private val nameAnimDirection: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()
-
-    private const val ANIMATION_DURATION_MS: Float = 150.0f
     private const val DEFAULT_BORDER_COLOR: Int = 0xFF00E5FF.toInt()
-    private const val LOOKING_AT_THRESHOLD_DEG: Double = 20.0
     private const val UV_FACE_MIN: Float = 1.0f / 8.0f
     private const val UV_FACE_MAX: Float = 2.0f / 8.0f
     private const val UV_HAT_MIN: Float = 5.0f / 8.0f
     private const val UV_HAT_MAX: Float = 6.0f / 8.0f
-
-    private const val MAX_ALPHA: Int = 0xBF
-    private const val FULL_ALPHA: Int = 255
-    private const val COLOR_MASK_RGB: Int = 0x00FFFFFF
-    private const val ALPHA_SHIFT: Int = 24
-    private const val NAME_TAG_Y_GAP: Int = 3
-    private const val POWER_EASING: Float = 3.0f
     private const val BORDER_THICKNESS: Int = 1
 
     @JvmStatic
@@ -77,16 +61,6 @@ object PlayerHeadRenderer {
             UV_HAT_MIN, UV_HAT_MAX, UV_FACE_MIN, UV_FACE_MAX,
         )
 
-        renderPlayerNameTag(
-            minecraft,
-            guiGraphics,
-            config,
-            trackedWaypoint,
-            playerName,
-            bounds,
-            borderColor,
-        )
-
         return true
     }
 
@@ -127,94 +101,5 @@ object PlayerHeadRenderer {
         )
     }
 
-    @Suppress("LongParameterList")
-    private fun renderPlayerNameTag(
-        minecraft: Minecraft,
-        guiGraphics: GuiGraphicsExtractor,
-        config: StellarExplorationConfig,
-        trackedWaypoint: TrackedWaypoint,
-        playerName: String,
-        bounds: HeadBounds,
-        textColor: Int,
-    ) {
-        val shouldShow = shouldShowPlayerName(minecraft, config, trackedWaypoint)
-        val isAnimating = updateAnimationState(playerName, shouldShow)
-        if (!shouldShow && !isAnimating) return
-
-        val (alpha, isFinished) = computeAnimatedAlpha(playerName)
-        if (isFinished) {
-            nameAnimStartTimes.remove(playerName)
-            nameAnimDirection.remove(playerName)
-        }
-
-        if (alpha <= 0) return
-
-        val font = minecraft.font
-        val textWidth = font.width(playerName)
-        val textX = bounds.x + (bounds.width - textWidth) / 2
-        val textY = bounds.y - font.lineHeight - NAME_TAG_Y_GAP
-        val finalColor = alpha shl ALPHA_SHIFT or (textColor and COLOR_MASK_RGB)
-        guiGraphics.text(font, playerName, textX, textY, finalColor, true)
-    }
-
-    private fun computeAnimatedAlpha(playerName: String): Pair<Int, Boolean> {
-        val now = System.currentTimeMillis()
-        val start = nameAnimStartTimes[playerName] ?: now
-        val elapsed = (now - start).toFloat()
-        val animProg = (elapsed / ANIMATION_DURATION_MS).coerceIn(0.0f, 1.0f)
-        val dir = nameAnimDirection[playerName] ?: true
-        val eff = if (dir) animProg else 1.0f - animProg
-        val eased = 1.0f - (1.0f - eff).pow(POWER_EASING)
-        val alpha = (MAX_ALPHA * eased).toInt().coerceIn(0, FULL_ALPHA)
-        val isFinished = !dir && animProg >= 1.0f
-        return Pair(alpha, isFinished)
-    }
-
     private data class HeadBounds(val x: Int, val y: Int, val width: Int, val height: Int)
-
-    private fun updateAnimationState(playerName: String, shouldShow: Boolean): Boolean {
-        val now = System.currentTimeMillis()
-        val isAnimating = nameAnimStartTimes.containsKey(playerName)
-
-        if (shouldShow && !isAnimating) {
-            nameAnimStartTimes[playerName] = now
-            nameAnimDirection[playerName] = true
-        } else if (!shouldShow && isAnimating) {
-            val dir = nameAnimDirection[playerName] ?: false
-            if (dir) {
-                val start = nameAnimStartTimes[playerName] ?: now
-                val elapsed = (now - start).toFloat()
-                val progress = (elapsed / ANIMATION_DURATION_MS).coerceIn(0.0f, 1.0f)
-                val newStart = now - ((1.0f - progress) * ANIMATION_DURATION_MS).toLong()
-                nameAnimStartTimes[playerName] = newStart
-                nameAnimDirection[playerName] = false
-            }
-        }
-        return isAnimating
-    }
-
-    private fun shouldShowPlayerName(
-        minecraft: Minecraft,
-        config: StellarExplorationConfig,
-        trackedWaypoint: TrackedWaypoint,
-    ): Boolean = when (config.showPlayerNames.value().uppercase()) {
-        "ALWAYS" -> true
-        "PLAYER_LIST" -> minecraft.options.keyPlayerList.isDown
-        "LOOKING_AT" -> isLookingAtPlayer(minecraft, trackedWaypoint)
-        else -> false
-    }
-
-    private fun isLookingAtPlayer(minecraft: Minecraft, trackedWaypoint: TrackedWaypoint): Boolean {
-        val camera = minecraft.cameraEntity ?: return false
-        val level = minecraft.level ?: return false
-        val uuid = trackedWaypoint.id().left().orElse(null) ?: return false
-        val target: Player = level.getPlayerByUUID(uuid) ?: return false
-
-        val cameraPos = camera.position()
-        val look = camera.getViewVector(1.0f)
-        val dir = target.position().subtract(cameraPos).normalize()
-        val dot = look.dot(dir)
-        val threshold = cos(Math.toRadians(LOOKING_AT_THRESHOLD_DEG))
-        return dot >= threshold
-    }
 }
