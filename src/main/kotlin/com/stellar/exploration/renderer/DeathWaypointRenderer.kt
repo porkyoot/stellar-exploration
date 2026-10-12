@@ -31,7 +31,7 @@ object DeathWaypointRenderer {
         width: Int,
         height: Int,
     ): Boolean {
-        if (waypoint.icon().style != WaypointTracking.DEATH_STYLE) {
+        if (minecraft.gui.screen() != null || waypoint.icon().style != WaypointTracking.DEATH_STYLE) {
             return false
         }
         val font = minecraft.font

@@ -45,6 +45,10 @@ public abstract class LocatorBarMixin implements ContextualBar {
         Operation<Void> original,
         @Local TrackedWaypoint waypoint
     ) {
+        if (this.minecraft.gui.screen() != null) {
+            return;
+        }
+
         boolean renderedHead = PlayerHeadRenderer.renderPlayerHead(
             this.minecraft,
             guiGraphics,
@@ -71,6 +75,10 @@ public abstract class LocatorBarMixin implements ContextualBar {
         DeltaTracker deltaTracker,
         CallbackInfo ci
     ) {
+        if (this.minecraft.gui.screen() != null) {
+            return;
+        }
+
         int barLeft = this.left(this.minecraft.getWindow());
         int barTop = this.top(this.minecraft.getWindow());
 

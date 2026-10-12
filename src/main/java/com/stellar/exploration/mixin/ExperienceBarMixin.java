@@ -1,9 +1,7 @@
 package com.stellar.exploration.mixin;
 
-import com.stellar.core.config.ConfigManager;
 import com.stellar.exploration.StellarExplorationMod;
 import com.stellar.exploration.config.StellarExplorationConfig;
-import com.stellar.exploration.renderer.CardinalPointsRenderer;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -27,17 +25,13 @@ public abstract class ExperienceBarMixin implements ContextualBar {
         DeltaTracker deltaTracker,
         CallbackInfo ci
     ) {
+        if (this.minecraft.gui.screen() != null) return;
         StellarExplorationConfig config = StellarExplorationMod.getConfig();
         if (config == null || !config.getEnabled().value()) return;
-
-        int barLeft = this.left(this.minecraft.getWindow());
-        int barTop = this.top(this.minecraft.getWindow());
 
         if (config.getAlwaysShowXP().value()) {
             LocatorBar locatorBar = new LocatorBar(this.minecraft);
             locatorBar.extractRenderState(guiGraphics, deltaTracker);
-        } else {
-            CardinalPointsRenderer.render(this.minecraft, guiGraphics, barLeft, barTop, ContextualBar.WIDTH);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.stellar.exploration.waypoints
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.player.LocalPlayer
 import net.minecraft.network.chat.Component
 import net.minecraft.util.ARGB
 import net.minecraft.world.waypoints.PartialTickSupplier
@@ -14,20 +15,21 @@ import kotlin.math.abs
  * Renders waypoint name tags above the cardinal points on the locator bar.
  */
 object WaypointNameRendering {
+    private const val CREATIVE_TEXT_Y_OFFSET: Int = 16
+    private const val STANDARD_TEXT_Y_OFFSET: Int = 30
+    private const val EXTRA_ROWS_TEXT_Y_OFFSET: Int = 40
     private const val MAX_YAW_DEGREE: Double = 60.0
-    private const val LOOKING_AT_THRESHOLD: Double = 12.0
     private const val BAR_HALF_WIDTH: Double = 86.5
     private const val BG_ALPHA: Int = 180
     private const val BG_PADDING: Int = 3
     private const val BOX_PAD_Y_MIN: Int = 2
     private const val BOX_PAD_Y_MAX: Int = 1
     private const val TEXT_COLOR_WHITE: Int = 0xFFFFFFFF.toInt()
-    private const val TAG_MARGIN_BOTTOM: Int = 3
-    private const val CARDINAL_TOP_OFFSET: Int = 13
-    private const val XP_ELEVATION_OFFSET: Int = 5
 
     @JvmStatic
     fun renderNames(client: Minecraft, graphics: GuiGraphicsExtractor, tickCounter: DeltaTracker, barTop: Int) {
+        if (client.gui.screen() != null || !client.options.keyPlayerList.isDown) return
+
         val world = client.level ?: return
         val player = client.player ?: return
         if (player.isSpectator) return
@@ -36,11 +38,21 @@ object WaypointNameRendering {
             tickCounter.getGameTimeDeltaPartialTick(!world.tickRateManager().isEntityFrozen(tickedEntity))
         }
 
-        val showAll = client.options.keyPlayerList.isDown
-        val hasExp = player.experienceLevel > 0
-        val cardinalOffset = if (hasExp) CARDINAL_TOP_OFFSET + XP_ELEVATION_OFFSET else CARDINAL_TOP_OFFSET
-        val textY = barTop - cardinalOffset - client.font.lineHeight - TAG_MARGIN_BOTTOM
+        val textY = computeTextY(player, barTop)
+        val waypoints = collectWaypoints(client, player)
+        val context = NameRenderContext(client, graphics, world, entityTickProgress, textY)
+        renderAllLabels(context, waypoints)
+    }
 
+    private fun computeTextY(player: LocalPlayer, barTop: Int): Int {
+        if (player.isCreative) return barTop - CREATIVE_TEXT_Y_OFFSET
+        val hasExtraRows = player.armorValue > 0 ||
+            player.absorptionAmount > 0f ||
+            player.airSupply < player.maxAirSupply
+        return if (hasExtraRows) barTop - EXTRA_ROWS_TEXT_Y_OFFSET else barTop - STANDARD_TEXT_Y_OFFSET
+    }
+
+    private fun collectWaypoints(client: Minecraft, player: LocalPlayer): List<TrackedWaypoint> {
         val waypoints = ArrayList<TrackedWaypoint>()
         val manager = client.connection?.waypointManager
         if (manager != null) {
@@ -48,13 +60,7 @@ object WaypointNameRendering {
         } else {
             waypoints.addAll(WaypointTracking.getAllWaypoints())
         }
-
-        val context = NameRenderContext(client, graphics, world, entityTickProgress, textY)
-        if (showAll) {
-            renderAllLabels(context, waypoints)
-        } else {
-            renderFocusedLabel(context, waypoints)
-        }
+        return waypoints
     }
 
     private fun renderAllLabels(context: NameRenderContext, waypoints: List<TrackedWaypoint>) {
@@ -67,26 +73,6 @@ object WaypointNameRendering {
                 drawWaypointNameTag(context.graphics, context.client.font, name, TagPos(textX, context.textY))
             }
         }
-    }
-
-    private fun renderFocusedLabel(context: NameRenderContext, waypoints: List<TrackedWaypoint>) {
-        val camera = context.client.gameRenderer.mainCamera()
-        var bestWaypoint: TrackedWaypoint? = null
-        var bestYaw = LOOKING_AT_THRESHOLD + 1.0
-
-        for (waypoint in waypoints) {
-            val yaw = waypoint.yawAngleToCamera(context.world, camera, context.progress)
-            val absYaw = abs(yaw)
-            if (absYaw < abs(bestYaw)) {
-                bestYaw = yaw
-                bestWaypoint = waypoint
-            }
-        }
-
-        val target = bestWaypoint?.takeIf { abs(bestYaw) <= LOOKING_AT_THRESHOLD } ?: return
-        val name = resolveWaypointName(context.client, target) ?: return
-        val textX = getXFromYaw(context.graphics, bestYaw)
-        drawWaypointNameTag(context.graphics, context.client.font, name, TagPos(textX, context.textY))
     }
 
     fun resolveWaypointName(client: Minecraft, waypoint: TrackedWaypoint): Component? {

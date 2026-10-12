@@ -33,6 +33,7 @@ object PlayerHeadRenderer {
     ): Boolean {
         val config = ConfigManager.get<StellarExplorationConfig>(StellarExplorationMod.MOD_ID, "main") ?: return false
         val playerInfo = resolvePlayerInfo(minecraft, trackedWaypoint)
+        if (minecraft.gui.screen() != null) return false
         val isEnabled = config.enabled.value() && config.renderPlayerHeads.value()
         if (!isEnabled || playerInfo == null) {
             return false

@@ -30,9 +30,9 @@ object CardinalPointsRenderer {
     private const val BEARING_EAST: Float = 270.0f
     private const val BEARING_SOUTH_EAST: Float = 315.0f
 
-    private const val DEFAULT_Y_OFFSET: Int = 2
-    private const val XP_AVOIDANCE_THRESHOLD: Int = 14
-    private const val XP_ELEVATION_OFFSET: Int = 7
+    private const val BAR_Y_OFFSET: Int = 2
+    private const val LEVEL_AVOIDANCE_RADIUS_MIN: Int = 14
+    private const val LEVEL_AVOIDANCE_PADDING: Int = 6
     private const val BAR_EDGE_INSET: Float = 6.0f
     private const val BAR_CLAMP_PADDING: Int = 2
 
@@ -56,22 +56,39 @@ object CardinalPointsRenderer {
         if (!canRender(minecraft, config) || config == null) return
 
         val player = minecraft.player ?: return
-        val camera = minecraft.gameRenderer.mainCamera()
-        val cameraYaw = camera.yRot()
+        val cameraYaw = minecraft.gameRenderer.mainCamera().yRot()
+        val layout = createBarLayout(minecraft, barLeft, barTop, barWidth)
 
+        renderAllPoints(guiGraphics, cameraYaw, config.showCardinalIntermediates.value(), layout)
+    }
+
+    private fun createBarLayout(minecraft: Minecraft, barLeft: Int, barTop: Int, barWidth: Int): BarLayout {
         val barCenterX = barLeft + barWidth / 2
         val usableHalfWidth = barWidth / 2.0f - BAR_EDGE_INSET
-        val showIntermediates = config.showCardinalIntermediates.value()
-        val layout = BarLayout(
+        val experienceLevel = minecraft.player?.experienceLevel ?: 0
+        val levelAvoidanceRadius = if (experienceLevel > 0) {
+            val levelWidth = minecraft.font.width(experienceLevel.toString())
+            maxOf(LEVEL_AVOIDANCE_RADIUS_MIN, levelWidth / 2 + LEVEL_AVOIDANCE_PADDING)
+        } else {
+            0
+        }
+        return BarLayout(
             barLeft = barLeft,
             barTop = barTop,
             barWidth = barWidth,
             barCenterX = barCenterX,
             usableHalfWidth = usableHalfWidth,
-            hasExperienceLevel = player.experienceLevel > 0,
+            levelAvoidanceRadius = levelAvoidanceRadius,
             font = minecraft.font,
         )
+    }
 
+    private fun renderAllPoints(
+        guiGraphics: GuiGraphicsExtractor,
+        cameraYaw: Float,
+        showIntermediates: Boolean,
+        layout: BarLayout,
+    ) {
         for (point in CARDINAL_POINTS) {
             if (!point.isMajor && !showIntermediates) continue
 
@@ -93,6 +110,7 @@ object CardinalPointsRenderer {
 
     private fun canRender(minecraft: Minecraft, config: StellarExplorationConfig?): Boolean {
         if (isConfigDisabled(config)) return false
+        if (minecraft.gui.screen() != null) return false
         val player = minecraft.player
         return player != null && !player.isSpectator
     }
@@ -105,13 +123,12 @@ object CardinalPointsRenderer {
         val maxX = layout.barLeft + layout.barWidth - textWidth - BAR_CLAMP_PADDING
         val drawX = (posX - textWidth / 2).coerceIn(minX, maxX)
 
-        val distFromCenter = abs(posX - layout.barCenterX)
-        val yOffset = if (layout.hasExperienceLevel && distFromCenter < XP_AVOIDANCE_THRESHOLD) {
-            layout.font.lineHeight + XP_ELEVATION_OFFSET
-        } else {
-            layout.font.lineHeight + DEFAULT_Y_OFFSET
+        val distFromCenter = abs(drawX + textWidth / 2 - layout.barCenterX)
+        if (layout.levelAvoidanceRadius > 0 && distFromCenter < layout.levelAvoidanceRadius) {
+            return
         }
-        val drawY = layout.barTop - yOffset
+
+        val drawY = layout.barTop - BAR_Y_OFFSET
 
         guiGraphics.text(layout.font, point.label, drawX, drawY, point.color, true)
     }
@@ -122,7 +139,7 @@ object CardinalPointsRenderer {
         val barWidth: Int,
         val barCenterX: Int,
         val usableHalfWidth: Float,
-        val hasExperienceLevel: Boolean,
+        val levelAvoidanceRadius: Int,
         val font: net.minecraft.client.gui.Font,
     )
 }
