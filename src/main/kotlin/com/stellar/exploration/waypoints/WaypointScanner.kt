@@ -44,8 +44,11 @@ internal object WaypointScanner {
             names = names,
         )
 
-        if (config.trackNormalCompasses.value() && isNormalCompassHeld(player, config)) {
-            processNormalCompass(context)
+        if (config.trackNormalCompasses.value()) {
+            val normalCompass = findNormalCompass(player, config)
+            if (normalCompass != null) {
+                processNormalCompass(context, normalCompass)
+            }
         }
 
         val nonEquipment = player.inventory.nonEquipmentItems
@@ -62,21 +65,15 @@ internal object WaypointScanner {
         }
     }
 
-    private fun isNormalCompass(stack: ItemStack): Boolean {
-        return stack.`is`(Items.COMPASS) && !stack.has(DataComponents.LODESTONE_TRACKER)
+    private fun findNormalCompass(player: LocalPlayer, config: StellarExplorationConfig): ItemStack? {
+        val hands = listOf(player.mainHandItem, player.offhandItem)
+        val held = hands.firstOrNull { it.isNormalCompass() }
+        if (held != null) return held
+        if (config.normalCompassRequiresHolding.value()) return null
+        return player.inventory.nonEquipmentItems.firstOrNull { it.isNormalCompass() }
     }
 
-    private fun isNormalCompassHeld(player: LocalPlayer, config: StellarExplorationConfig): Boolean {
-        if (isNormalCompass(player.mainHandItem) || isNormalCompass(player.offhandItem)) {
-            return true
-        }
-        if (!config.normalCompassRequiresHolding.value()) {
-            return player.inventory.nonEquipmentItems.any { isNormalCompass(it) }
-        }
-        return false
-    }
-
-    private fun processNormalCompass(context: TrackingContext) {
+    private fun processNormalCompass(context: TrackingContext, compass: ItemStack) {
         val respawnData = context.player.level().respawnData
         if (respawnData.dimension() != context.dimension) return
 
@@ -90,7 +87,10 @@ internal object WaypointScanner {
             this.color = Optional.of(color)
         }
         context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
-        context.names[uuid] = Component.translatable("waypoint.stellar_exploration.world_spawn")
+        val customName = ColorHandler.extractCustomName(compass)
+        if (customName != null) {
+            context.names[uuid] = customName
+        }
     }
 
     private fun processItemStack(context: TrackingContext, stack: ItemStack) {
@@ -109,7 +109,9 @@ internal object WaypointScanner {
         }
 
         if (context.config.trackBundles.value()) {
-            processBundle(context, stack)
+            stack.get(DataComponents.BUNDLE_CONTENTS)?.itemCopyStream()?.forEach { bundled ->
+                processItemStack(context, bundled)
+            }
         }
     }
 
@@ -130,8 +132,10 @@ internal object WaypointScanner {
             this.color = Optional.of(color)
         }
         context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
-        context.names[uuid] = ColorHandler.extractDisplayName(stack)
-            ?: Component.translatable("item.minecraft.lodestone_compass")
+        val customName = ColorHandler.extractCustomName(stack)
+        if (customName != null) {
+            context.names[uuid] = customName
+        }
     }
 
     private fun processRecoveryCompass(context: TrackingContext, stack: ItemStack) {
@@ -151,8 +155,10 @@ internal object WaypointScanner {
             this.color = Optional.of(color)
         }
         context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
-        context.names[uuid] = ColorHandler.extractDisplayName(stack)
-            ?: Component.translatable("item.minecraft.recovery_compass")
+        val customName = ColorHandler.extractCustomName(stack)
+        if (customName != null) {
+            context.names[uuid] = customName
+        }
     }
 
     private fun processMapBanners(context: TrackingContext, stack: ItemStack) {
@@ -177,13 +183,9 @@ internal object WaypointScanner {
 
     private fun processMapDataBanners(context: TrackingContext, mapData: MapItemSavedData) {
         for (banner in mapData.banners) {
-            val bannerColor = banner.color()
-            val color = ARGB.color(DEFAULT_ALPHA, bannerColor.textureDiffuseColor)
-            val name = banner.name().orElseGet {
-                val colorName = bannerColor.name.lowercase()
-                Component.literal("${colorName.replaceFirstChar { it.uppercase() }} Banner")
-            }
-            addBannerWaypoint(context, banner.pos(), color, name)
+            val color = ARGB.color(DEFAULT_ALPHA, banner.color().textureDiffuseColor)
+            val customName = extractCleanBannerName(banner.name().orElse(null))
+            addBannerWaypoint(context, banner.pos(), color, customName)
         }
     }
 
@@ -199,11 +201,8 @@ internal object WaypointScanner {
 
             val dyeColor = extractBannerColor(assetPath)
             val color = ARGB.color(DEFAULT_ALPHA, dyeColor.textureDiffuseColor)
-            val name = decoration.name().orElseGet {
-                val colorName = dyeColor.name.lowercase()
-                Component.literal("${colorName.replaceFirstChar { it.uppercase() }} Banner")
-            }
-            addBannerWaypoint(context, pos, color, name)
+            val customName = extractCleanBannerName(decoration.name().orElse(null))
+            addBannerWaypoint(context, pos, color, customName)
         }
     }
 
@@ -216,22 +215,11 @@ internal object WaypointScanner {
             val pos = BlockPos(entry.x().toInt(), context.player.blockY, entry.z().toInt())
             val dyeColor = extractBannerColor(assetPath)
             val color = ARGB.color(DEFAULT_ALPHA, dyeColor.textureDiffuseColor)
-            val name = Component.literal("${dyeColor.name.lowercase().replaceFirstChar { it.uppercase() }} Banner")
-            addBannerWaypoint(context, pos, color, name)
+            addBannerWaypoint(context, pos, color, null)
         }
     }
 
-    private fun extractBannerColor(assetPath: String): DyeColor {
-        val lower = assetPath.lowercase()
-        for (color in DyeColor.entries.sortedByDescending { it.name.length }) {
-            if (lower.contains(color.name.lowercase())) {
-                return color
-            }
-        }
-        return DyeColor.WHITE
-    }
-
-    private fun addBannerWaypoint(context: TrackingContext, pos: BlockPos, color: Int, name: Component) {
+    private fun addBannerWaypoint(context: TrackingContext, pos: BlockPos, color: Int, name: Component?) {
         val uuid = UUID.nameUUIDFromBytes(
             "banner:${pos.x}:${pos.y}:${pos.z}".toByteArray(StandardCharsets.UTF_8),
         )
@@ -240,13 +228,8 @@ internal object WaypointScanner {
             this.color = Optional.of(color)
         }
         context.destination[uuid] = TrackedWaypoint.setPosition(uuid, icon, pos)
-        context.names[uuid] = name
-    }
-
-    private fun processBundle(context: TrackingContext, stack: ItemStack) {
-        val bundle = stack.get(DataComponents.BUNDLE_CONTENTS) ?: return
-        bundle.itemCopyStream().forEach { bundledStack ->
-            processItemStack(context, bundledStack)
+        if (name != null) {
+            context.names[uuid] = name
         }
     }
 
@@ -257,4 +240,23 @@ internal object WaypointScanner {
         val destination: MutableMap<UUID, TrackedWaypoint>,
         val names: MutableMap<UUID, Component>,
     )
+}
+
+private fun ItemStack.isNormalCompass(): Boolean =
+    this.`is`(Items.COMPASS) && !this.has(DataComponents.LODESTONE_TRACKER)
+
+private fun extractCleanBannerName(component: Component?): Component? {
+    val raw = component?.string ?: return null
+    val cleaned = ColorHandler.removeColorCodes(raw)
+    return if (cleaned.isNotBlank()) Component.literal(cleaned) else null
+}
+
+private fun extractBannerColor(assetPath: String): DyeColor {
+    val lower = assetPath.lowercase()
+    for (color in DyeColor.entries.sortedByDescending { it.name.length }) {
+        if (lower.contains(color.name.lowercase())) {
+            return color
+        }
+    }
+    return DyeColor.WHITE
 }

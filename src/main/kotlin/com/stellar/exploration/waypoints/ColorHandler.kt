@@ -70,19 +70,13 @@ object ColorHandler {
         return ARGB.color(ALPHA_OPAQUE, textColor.value)
     }
 
-    fun extractDisplayName(stack: ItemStack): Component? {
-        val customName = stack.get(DataComponents.CUSTOM_NAME)
-        if (customName != null) {
-            val cleaned = removeColorCodes(customName.string)
-            if (cleaned.isNotBlank()) return Component.literal(cleaned)
-        }
-        val itemName = stack.get(DataComponents.ITEM_NAME)
-        if (itemName != null) {
-            val cleaned = removeColorCodes(itemName.string)
-            if (cleaned.isNotBlank()) return Component.literal(cleaned)
-        }
-        return null
+    fun extractCustomName(stack: ItemStack): Component? {
+        val customName = stack.get(DataComponents.CUSTOM_NAME) ?: return null
+        val cleaned = removeColorCodes(customName.string)
+        return if (cleaned.isNotBlank()) Component.literal(cleaned) else null
     }
+
+    fun extractDisplayName(stack: ItemStack): Component? = extractCustomName(stack)
 
     fun removeColorCodes(text: String): String = text
         .replace(Regex("( ?)([({<\\[]?)(#[0-9a-fA-F]{6})([)}>\\]]?)"), "")

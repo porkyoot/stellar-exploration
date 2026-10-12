@@ -15,9 +15,9 @@ import kotlin.math.abs
  * Renders waypoint name tags above the cardinal points on the locator bar.
  */
 object WaypointNameRendering {
-    private const val CREATIVE_TEXT_Y_OFFSET: Int = 16
-    private const val STANDARD_TEXT_Y_OFFSET: Int = 30
-    private const val EXTRA_ROWS_TEXT_Y_OFFSET: Int = 40
+    private const val CREATIVE_TEXT_Y_OFFSET: Int = 13
+    private const val STANDARD_TEXT_Y_OFFSET: Int = 21
+    private const val EXTRA_ROWS_TEXT_Y_OFFSET: Int = 31
     private const val MAX_YAW_DEGREE: Double = 60.0
     private const val BAR_HALF_WIDTH: Double = 86.5
     private const val BG_ALPHA: Int = 180
